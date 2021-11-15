@@ -59,7 +59,7 @@ export const onCreateUser = functions.auth.user().onCreate((authUser) => {
   const uid = authUser.uid;
   firestore.runTransaction(async () => {
     const username = await firestore.collection("usernames").add({
-      user_id: uid,
+      userId: uid,
     });
     const user = await firestore.collection("users").withConverter(userConverter).add(
       new User(
