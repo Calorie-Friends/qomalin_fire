@@ -9,7 +9,7 @@ import * as maps from "@googlemaps/google-maps-services-js";
 //   functions.logger.info("Hello logs!", {structuredData: true});
 //   response.send("Hello from Firebase!");
 // });
-const GOOGLE_MAP_API_TOKEN: string = process.env.GOOGLE_MAP_API_TOKEN ?? "";
+const GOOGLE_MAP_API_TOKEN: string = functions.config().google_map.token;
 admin.initializeApp();
 const firestore = admin.firestore();
 
