@@ -1,5 +1,7 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import * as maps from "@googlemaps/google-maps-services-js";
+
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
 //
@@ -7,6 +9,7 @@ import * as admin from "firebase-admin";
 //   functions.logger.info("Hello logs!", {structuredData: true});
 //   response.send("Hello from Firebase!");
 // });
+const GOOGLE_MAP_API_TOKEN: string = process.env.GOOGLE_MAP_API_TOKEN ?? "";
 admin.initializeApp();
 const firestore = admin.firestore();
 
@@ -37,3 +40,29 @@ export const onDeleteUser = functions.auth.user().onDelete((user) => {
     batch.commit();
   });
 });
+
+
+export const onQuestoinCreated = functions.firestore.document("questions/{questionId}").onCreate(async (snapshot) => {  
+  const geopoint = snapshot.data()["location"]["geopoint"];
+  
+  const client = new maps.Client();
+  const res = await client.reverseGeocode({
+    params: {
+      latlng: {
+        lat: geopoint["latitude"],
+        lng: geopoint["longitude"],
+      },
+      language: maps.Language.ja,
+      key: GOOGLE_MAP_API_TOKEN
+    }
+  });
+  if(res.data.results.length == 0)  {
+    console.error(`住所の取得に失敗${res}`);
+    return;
+  }
+  const address = res.data.results[0].formatted_address;
+  await snapshot.ref.update({
+    address: address
+  });
+});
+
