@@ -3,7 +3,7 @@
   "fieldOverrides": [
     {
       "collectionGroup": "answers",
-      "fieldPath": "user_id",
+      "fieldPath": "userId",
       "indexes": [
         {
           "order": "ASCENDING",

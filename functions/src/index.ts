@@ -61,7 +61,7 @@ export const onCreateUser = functions.auth.user().onCreate((authUser) => {
     const username = await firestore.collection("usernames").add({
       userId: uid,
     });
-    const user = await firestore.collection("users").withConverter(userConverter).add(
+    const user = await firestore.collection("users").withConverter(userConverter).doc(authUser.uid).set(
       new User(
         "", 
         {
@@ -70,13 +70,15 @@ export const onCreateUser = functions.auth.user().onCreate((authUser) => {
         }
       )
     );
+    console.log(`user:${user}`);
     return user;
   });
 
 });
-export const onDeleteUser = functions.auth.user().onDelete((user) => {
+export const onDeleteUser = functions.auth.user().onDelete(async (user) => {
   const batch = firestore.batch();
-  firestore.runTransaction(async ()=> {
+  return await firestore.runTransaction(async ()=> {
+    console.log(`削除対象:${user.uid}`);
     const questions = await firestore.collection("questions")
       .where("userId", "==", user.uid).get();
     questions.docs.map((q) => batch.delete(q.ref));
@@ -84,7 +86,7 @@ export const onDeleteUser = functions.auth.user().onDelete((user) => {
       .where("userId", "==", user.uid).get();
     answers.docs.map((a) => batch.delete(a.ref));
     batch.delete(firestore.collection("users").doc(user.uid));
-    batch.commit();
+    return await batch.commit();
   });
 });
 
