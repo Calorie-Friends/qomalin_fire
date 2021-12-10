@@ -54,8 +54,24 @@ interface Question {
   text: string | undefined,
   address: string | undefined,
   imageUrls: Array<string>,
-  location: any,
   userId: string
+}
+
+interface Thank {
+  comment: string | undefined,
+  userId: string,
+  answerId: string,
+}
+
+interface Notification {
+  type: string,
+  recipientId: string,
+  userId: string,
+  user: FirebaseFirestore.DocumentReference<User>,
+  answerId: string | undefined,
+  thankId: string | undefined,
+  thank: FirebaseFirestore.DocumentReference<Thank> | undefined,
+  answer: FirebaseFirestore.DocumentReference<Answer> | undefined
 }
 
 const userConverter: FirebaseFirestore.FirestoreDataConverter<User> = {
@@ -148,10 +164,74 @@ export const onAnswerCreated = functions.firestore.document("/questions/{questio
       type: "answered",
       recipientId: question.userId,
       userId: answer.userId,
-      user: userRef,
+      user: firestore.collection("users").doc(answer.userId),
       answer: snapshot.ref,
       answerId: snapshot.id,
       createdAt: FirebaseFirestore.FieldValue.serverTimestamp(),
       updatedAt: FirebaseFirestore.FieldValue.serverTimestamp(),
     });
+});
+
+export const onThankCreated = functions
+  .firestore
+  .document("/questions/{question}/answers/{answer}/thanks/{thank}")
+.onCreate(async (snapshot) => {
+  const thank = snapshot.data() as Thank;
+  const answerRef = firestore.collection("answers").doc(thank.answerId);
+  const answer = (await answerRef.get()).data() as Answer;
+  const userRef = firestore.collection("users").doc(answer.userId);
+
+  // 自分のAnswerに対してのThankは通知しない。
+  if(answer.userId == thank.userId) {
+    return;
+  }
+  return await userRef.collection("notifications")
+    .add({
+      type: "thanked",
+      recipientId: answer.userId,
+      userId: thank.userId,
+      user: firestore.collection("users").doc(thank.userId),
+      thank: snapshot.ref,
+      thankId: snapshot.id,
+      createdAt: FirebaseFirestore.FieldValue.serverTimestamp(),
+      updatedAt: FirebaseFirestore.FieldValue.serverTimestamp(),
+    });
+});
+
+
+export const onNotificationCreated = functions.firestore.document("/users/{user}/notifications/{user}").onCreate(async (snapshot) => {
+  const notification = snapshot.data() as Notification;
+  const recipientRef = firestore.collection("private-users").doc(notification.recipientId);
+  const recipient = await recipientRef.get();
+  if(!recipient.exists) {
+    return;
+  }
+  const tokens = await recipientRef.collection("push-tokens").get();
+  
+  const userRef = await notification.user.get();
+  const user = userRef.data() as User;
+  
+  const pushNotify = {
+    title: user.username,
+    body: (await (async () => {
+      if(notification.type == "answered") {
+        return "回答が来ました。";
+      }else if(notification.type == "thanked") {
+        return "お礼が来ました";
+      }
+      return "";
+    })()),
+  };
+
+  const payload = {
+    notification: pushNotify
+  };
+
+  return await Promise.all(
+    tokens.docs.map(async (e)=> {
+      await admin.messaging().sendToDevice(e.id, payload);
+      
+    })
+  );
+  
 });
