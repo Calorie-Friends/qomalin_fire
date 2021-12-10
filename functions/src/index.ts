@@ -199,14 +199,14 @@ export const onThankCreated = functions
 });
 
 
-export const onNotificationCreated = functions.firestore.document("/users/{user}/notifications/{user}").onCreate(async (snapshot) => {
+export const onNotificationCreated = functions.firestore.document("/users/{user}/notifications/{notification}").onCreate(async (snapshot) => {
   const notification = snapshot.data() as Notification;
-  const recipientRef = firestore.collection("private-users").doc(notification.recipientId);
+  const recipientRef = firestore.collection("private_users").doc(notification.recipientId);
   const recipient = await recipientRef.get();
   if(!recipient.exists) {
     return;
   }
-  const tokens = await recipientRef.collection("push-tokens").get();
+  const tokens = await recipientRef.collection("device_tokens").get();
   
   const userRef = await notification.user.get();
   const user = userRef.data() as User;
