@@ -181,6 +181,10 @@ export const onThankCreated = functions
   const answer = (await answerRef.get()).data() as Answer;
   const userRef = firestore.collection("users").doc(answer.userId);
 
+  await answerRef.update({
+    thankIds: FirebaseFirestore.FieldValue.arrayUnion(snapshot.id)
+  });
+
   // 自分のAnswerに対してのThankは通知しない。
   if(answer.userId == thank.userId) {
     return;
@@ -198,6 +202,14 @@ export const onThankCreated = functions
     });
 });
 
+export const onThankDeleted = functions.firestore.document("/questions/{question}/answers/{answer}/thanks/{thank}").onDelete(async (snapshot)=>{
+  const thank = snapshot.data() as Thank;
+  const answerRef = firestore.collection("answers").doc(thank.answerId);
+  return await answerRef.update({
+    thankIds: FirebaseFirestore.FieldValue.arrayRemove(snapshot.id)
+  });
+});
+  
 
 export const onNotificationCreated = functions.firestore.document("/users/{user}/notifications/{notification}").onCreate(async (snapshot) => {
   const notification = snapshot.data() as Notification;
