@@ -1,7 +1,6 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import * as maps from "@googlemaps/google-maps-services-js";
-
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
 //
@@ -39,6 +38,25 @@ class User {
   }
 }
 
+/**
+ * 回答を表すオブジェクト
+ */
+interface Answer {
+  userId: string,
+  text: string,
+  questionId: string,
+  createdAt: Date,
+  updatedAt: Date,
+}
+
+interface Question {
+  title: string,
+  text: string | undefined,
+  address: string | undefined,
+  imageUrls: Array<string>,
+  location: any,
+  userId: string
+}
 
 const userConverter: FirebaseFirestore.FirestoreDataConverter<User> = {
   fromFirestore(snapshot: FirebaseFirestore.QueryDocumentSnapshot) {
@@ -53,6 +71,8 @@ const userConverter: FirebaseFirestore.FirestoreDataConverter<User> = {
     };
   }
 };
+
+
 
 
 export const onCreateUser = functions.auth.user().onCreate((authUser) => {
@@ -115,3 +135,23 @@ export const onQuestoinCreated = functions.firestore.document("questions/{questi
   });
 });
 
+export const onAnswerCreated = functions.firestore.document("/questions/{questionId}/answers/{answer}").onCreate(async (snapshot) => {
+  const answer = snapshot.data() as Answer;
+  const questionId = answer.questionId;
+  const question = (await firestore.collection("questions").doc(questionId).get()).data() as Question;
+  if(question.userId == answer.userId) {
+    return;
+  }
+  const userRef = firestore.collection("users").doc(question.userId);
+  return await userRef.collection("notifications")
+    .add({
+      type: "answered",
+      recipientId: question.userId,
+      userId: answer.userId,
+      user: userRef,
+      answer: snapshot.ref,
+      answerId: snapshot.id,
+      createdAt: FirebaseFirestore.FieldValue.serverTimestamp(),
+      updatedAt: FirebaseFirestore.FieldValue.serverTimestamp(),
+    });
+});
