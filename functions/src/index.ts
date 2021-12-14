@@ -61,6 +61,7 @@ interface Thank {
   comment: string | undefined,
   userId: string,
   answerId: string,
+  questionId: string,
 }
 
 interface Notification {
@@ -151,7 +152,7 @@ export const onQuestoinCreated = functions.firestore.document("questions/{questi
   });
 });
 
-export const onAnswerCreated = functions.firestore.document("/questions/{questionId}/answers/{answer}").onCreate(async (snapshot) => {
+export const onAnswerCreated = functions.firestore.document("/questions/{question}/answers/{answer}").onCreate(async (snapshot) => {
   const answer = snapshot.data() as Answer;
   const questionId = answer.questionId;
   const question = (await firestore.collection("questions").doc(questionId).get()).data() as Question;
@@ -167,8 +168,8 @@ export const onAnswerCreated = functions.firestore.document("/questions/{questio
       user: firestore.collection("users").doc(answer.userId),
       answer: snapshot.ref,
       answerId: snapshot.id,
-      createdAt: FirebaseFirestore.FieldValue.serverTimestamp(),
-      updatedAt: FirebaseFirestore.FieldValue.serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 });
 
@@ -177,12 +178,15 @@ export const onThankCreated = functions
   .document("/questions/{question}/answers/{answer}/thanks/{thank}")
 .onCreate(async (snapshot) => {
   const thank = snapshot.data() as Thank;
-  const answerRef = firestore.collection("answers").doc(thank.answerId);
+  const questinoRef = firestore.collection("questions").doc(thank.questionId);
+  const answerRef = questinoRef.collection("answers").doc(thank.answerId);
   const answer = (await answerRef.get()).data() as Answer;
+  console.log(`answer:${answer}`);
+
   const userRef = firestore.collection("users").doc(answer.userId);
 
   await answerRef.update({
-    thankIds: FirebaseFirestore.FieldValue.arrayUnion(snapshot.id)
+    thankIds: admin.firestore.FieldValue.arrayUnion(snapshot.id)
   });
 
   // 自分のAnswerに対してのThankは通知しない。
@@ -197,8 +201,8 @@ export const onThankCreated = functions
       user: firestore.collection("users").doc(thank.userId),
       thank: snapshot.ref,
       thankId: snapshot.id,
-      createdAt: FirebaseFirestore.FieldValue.serverTimestamp(),
-      updatedAt: FirebaseFirestore.FieldValue.serverTimestamp(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 });
 
