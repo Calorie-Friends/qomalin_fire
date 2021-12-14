@@ -210,7 +210,7 @@ export const onThankDeleted = functions.firestore.document("/questions/{question
   const thank = snapshot.data() as Thank;
   const answerRef = firestore.collection("answers").doc(thank.answerId);
   return await answerRef.update({
-    thankIds: FirebaseFirestore.FieldValue.arrayRemove(snapshot.id)
+    thankIds: admin.firestore.FieldValue.arrayRemove(snapshot.id)
   });
 });
   
