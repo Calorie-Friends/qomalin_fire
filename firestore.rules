@@ -34,6 +34,7 @@ service cloud.firestore {
         	allow read: if true;
           allow create: if request.auth != null;
           allow delete: if request.auth.uid == resource.data.userId;
+          allow update: if request.auth != null && request.auth.uid == resource.data.userId;
         }
       }
     }
