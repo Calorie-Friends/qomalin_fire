@@ -92,9 +92,9 @@ const userConverter: FirebaseFirestore.FirestoreDataConverter<User> = {
 
 
 
-export const onCreateUser = functions.auth.user().onCreate((authUser) => {
+export const onCreateUser = functions.auth.user().onCreate(async (authUser) => {
   const uid = authUser.uid;
-  firestore.runTransaction(async () => {
+  await firestore.runTransaction(async () => {
     const username = await firestore.collection("usernames").add({
       userId: uid,
     });
